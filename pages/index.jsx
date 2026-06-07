@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 
-
 const VALENCE_LABELS = {
   "-2": "かなり不快",
   "-1": "やや不快",
@@ -8,7 +7,6 @@ const VALENCE_LABELS = {
   "1": "やや快",
   "2": "かなり快",
 };
-
 const AROUSAL_LABELS = {
   1: "とても穏やか",
   2: "落ち着いている",
@@ -17,148 +15,413 @@ const AROUSAL_LABELS = {
   5: "強く興奮",
 };
 
-function Slider({ value, onChange, min, max, step = 1, labels, color }) {
+const css = `
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Noto+Sans+JP:wght@300;400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream: #f5f0e8;
+    --warm-white: #faf8f4;
+    --sand: #e8dfd0;
+    --terra: #c4714a;
+    --terra-light: #d4886a;
+    --terra-pale: #f0ddd5;
+    --sage: #7a9e8e;
+    --sage-pale: #ddeae4;
+    --dusty-blue: #7b9ab5;
+    --dusty-blue-pale: #dce8f0;
+    --mauve: #a07a8e;
+    --mauve-pale: #eadde4;
+    --text-primary: #2c2420;
+    --text-secondary: #8a7b72;
+    --text-muted: #b5a89e;
+    --border: #ddd4c8;
+    --shadow: rgba(44, 36, 32, 0.08);
+  }
+
+  body { background: var(--warm-white); }
+
+  .app {
+    min-height: 100vh;
+    background: var(--warm-white);
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(196,113,74,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, rgba(122,158,142,0.06) 0%, transparent 50%);
+    font-family: 'Noto Sans JP', sans-serif;
+    color: var(--text-primary);
+    padding: 48px 20px 80px;
+  }
+
+  .container { max-width: 580px; margin: 0 auto; }
+
+  .header { margin-bottom: 44px; }
+
+  .app-name-row {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .app-name-ja {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 28px;
+    font-weight: 500;
+    color: var(--text-primary);
+    letter-spacing: 0.05em;
+  }
+  .app-name-ja .koko { color: var(--terra); }
+  .app-name-en {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-style: italic;
+    letter-spacing: 2.5px;
+    color: var(--text-muted);
+    font-weight: 300;
+  }
+  .app-name-divider {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, var(--border), transparent);
+    margin-bottom: 3px;
+  }
+  .header-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 300;
+    color: var(--text-secondary);
+    letter-spacing: 0px;
+    line-height: 1.4;
+    margin-bottom: 6px;
+  }
+  .header-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 300;
+    letter-spacing: 0.3px;
+    line-height: 1.7;
+  }
+
+  .input-card {
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px 28px;
+    margin-bottom: 28px;
+    transition: border-color 0.25s, box-shadow 0.25s;
+  }
+  .input-card:focus-within {
+    border-color: var(--terra-light);
+    box-shadow: 0 0 0 3px rgba(196,113,74,0.08), 0 4px 20px var(--shadow);
+  }
+  .input-label {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+  textarea {
+    width: 100%;
+    min-height: 88px;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    font-size: 15px;
+    line-height: 1.85;
+    resize: none;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-weight: 300;
+    overflow: hidden;
+  }
+  textarea::placeholder { color: var(--text-muted); font-weight: 300; }
+
+  .sliders { display: flex; flex-direction: column; gap: 20px; margin-bottom: 32px; }
+
+  .slider-row {
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px 22px;
+  }
+  .slider-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .slider-name { font-size: 12px; font-weight: 500; letter-spacing: 0.8px; color: var(--text-secondary); }
+  .slider-desc { font-size: 11px; color: var(--text-muted); font-weight: 300; }
+  .slider-value-label {
+    margin-left: auto;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 14px;
+    font-style: italic;
+    font-weight: 400;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 3px;
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    margin-bottom: 6px;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2.5px solid white;
+    box-shadow: 0 2px 8px rgba(44,36,32,0.2);
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+  .slider-ends {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 300;
+  }
+
+  .btn-row { display: flex; gap: 10px; margin-bottom: 8px; }
+
+  .btn-analyze {
+    flex: 1;
+    padding: 15px 20px;
+    border-radius: 14px;
+    border: none;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+  .btn-analyze.active {
+    background: var(--terra);
+    color: white;
+    box-shadow: 0 4px 16px rgba(196,113,74,0.3);
+  }
+  .btn-analyze.active:hover {
+    background: var(--terra-light);
+    box-shadow: 0 6px 20px rgba(196,113,74,0.35);
+    transform: translateY(-1px);
+  }
+  .btn-analyze.inactive { background: var(--sand); color: var(--text-muted); cursor: default; }
+
+  .btn-reset {
+    padding: 15px 18px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn-reset:hover { border-color: var(--terra-light); color: var(--terra); background: var(--terra-pale); }
+  .btn-reset-below { width: 100%; margin-top: 10px; }
+
+  .error-msg {
+    margin-top: 12px;
+    color: #c0614a;
+    font-size: 12px;
+    text-align: center;
+    padding: 10px;
+    background: rgba(192,97,74,0.06);
+    border-radius: 8px;
+  }
+
+  .result-block { margin-top: 28px; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .result-section-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .result-section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .trio-grid { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+  .trio-card {
+    border-radius: 14px;
+    padding: 14px 18px;
+    border: 1px solid transparent;
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    align-items: baseline;
+    gap: 14px;
+  }
+  .trio-card-label { font-size: 10px; letter-spacing: 1px; font-weight: 500; white-space: nowrap; padding-top: 2px; }
+  .trio-card-text { font-size: 13px; line-height: 1.75; font-weight: 300; color: var(--text-secondary); }
+
+  .tag-section { margin-bottom: 18px; }
+  .tag-section-label { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; font-weight: 400; letter-spacing: 0.5px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.5;
+    border: 1px solid transparent;
+  }
+
+  .ai-note {
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 22px 20px 28px;
+    margin-top: 8px;
+    margin-bottom: 20px;
+    position: relative;
+  }
+  .ai-note::before {
+    content: '"';
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 56px;
+    color: var(--terra-pale);
+    position: absolute;
+    top: 4px;
+    left: 14px;
+    line-height: 1;
+    pointer-events: none;
+  }
+  .ai-note-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--terra); font-weight: 500; margin-bottom: 10px; }
+  .ai-note-text { font-size: 13px; line-height: 1.9; color: var(--text-secondary); font-weight: 300; }
+
+  .btn-save {
+    width: 100%;
+    padding: 16px;
+    border-radius: 14px;
+    border: none;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+  .btn-save.idle {
+    background: var(--text-primary);
+    color: var(--warm-white);
+    box-shadow: 0 4px 16px rgba(44,36,32,0.15);
+  }
+  .btn-save.idle:hover {
+    background: #3d342e;
+    box-shadow: 0 6px 20px rgba(44,36,32,0.2);
+    transform: translateY(-1px);
+  }
+  .btn-save.loading { background: var(--sand); color: var(--text-muted); cursor: default; }
+  .btn-save.done { background: var(--sage); color: white; cursor: default; }
+
+  .footer { margin-top: 48px; text-align: center; font-size: 11px; color: var(--text-muted); font-weight: 300; letter-spacing: 0.3px; }
+  .footer span { font-family: 'Cormorant Garamond', serif; font-style: italic; color: var(--terra-light); }
+`;
+
+function Slider({ value, onChange, min, max, trackColor, thumbColor, endLabels, currentLabel }) {
   const pct = ((value - min) / (max - min)) * 100;
+  const trackStyle = {
+    background: `linear-gradient(to right, ${trackColor} ${pct}%, #e8dfd0 ${pct}%)`,
+  };
   return (
-    <div style={{ width: "100%" }}>
+    <div>
+      <style>{`
+        .thumb-${thumbColor.replace('#','')}{} 
+        input[type=range].track-${thumbColor.replace('#','')}::-webkit-slider-thumb { background: ${thumbColor}; }
+      `}</style>
       <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
+        type="range" min={min} max={max} value={value}
+        className={`track-${thumbColor.replace('#','')}`}
         onChange={(e) => onChange(Number(e.target.value))}
-        style={{
-          width: "100%",
-          accentColor: color,
-          cursor: "pointer",
-          height: "4px",
-        }}
+        style={trackStyle}
       />
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-        <span style={{ fontSize: 11, color: "#888" }}>{labels[min]}</span>
-        <span style={{ fontSize: 12, fontWeight: 600, color: color }}>
-          {labels[value]}
-        </span>
-        <span style={{ fontSize: 11, color: "#888" }}>{labels[max]}</span>
+      <div className="slider-ends">
+        <span>{endLabels[0]}</span>
+        <span>{endLabels[1]}</span>
       </div>
     </div>
   );
 }
 
-function Tag({ label, color, bg }) {
+function Tag({ label, color, bg, border }) {
   return (
-    <span
-      style={{
-        display: "inline-block",
-        padding: "3px 10px",
-        borderRadius: 20,
-        fontSize: 12,
-        fontWeight: 500,
-        color,
-        background: bg,
-        margin: "3px 3px",
-        lineHeight: 1.6,
-      }}
-    >
+    <span className="tag" style={{ color, background: bg, borderColor: border || bg }}>
       {label}
     </span>
   );
 }
 
-function ResultBlock({ result, onSave, saving, saved }) {
+function ResultBlock({ result, onSave, onReset, saving, saved }) {
   return (
-    <div
-      style={{
-        background: "#0f0f0f",
-        border: "1px solid #222",
-        borderRadius: 16,
-        padding: "24px 28px",
-        marginTop: 24,
-        fontFamily: "'Noto Sans JP', sans-serif",
-      }}
-    >
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 11, color: "#555", letterSpacing: 2, marginBottom: 8, textTransform: "uppercase" }}>Analysis</div>
+    <div className="result-block">
+      <div className="result-section-label">Analysis</div>
+      <div className="trio-grid">
+        {[
+          { label: "事実", value: result.fact, color: "var(--dusty-blue)", bg: "var(--dusty-blue-pale)", border: "rgba(123,154,181,0.25)" },
+          { label: "感情", value: result.emotionRaw, color: "var(--terra)", bg: "var(--terra-pale)", border: "rgba(196,113,74,0.25)" },
+          { label: "認知", value: result.cognitionRaw, color: "var(--mauve)", bg: "var(--mauve-pale)", border: "rgba(160,122,142,0.25)" },
+        ].map(({ label, value, color, bg, border }) => (
+          <div className="trio-card" key={label} style={{ background: bg, borderColor: border }}>
+            <div className="trio-card-label" style={{ color }}>{label}</div>
+            <div className="trio-card-text">{value || "—"}</div>
+          </div>
+        ))}
+      </div>
 
-        {/* 事実 / 感情 / 認知 */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 20 }}>
-          {[
-            { label: "事実", value: result.fact, color: "#6ee7f7", bg: "rgba(110,231,247,0.08)" },
-            { label: "感情", value: result.emotionRaw, color: "#f7c16e", bg: "rgba(247,193,110,0.08)" },
-            { label: "認知", value: result.cognitionRaw, color: "#c16ef7", bg: "rgba(193,110,247,0.08)" },
-          ].map(({ label, value, color, bg }) => (
-            <div key={label} style={{ background: bg, borderRadius: 10, padding: "10px 14px" }}>
-              <div style={{ fontSize: 10, color, letterSpacing: 1, marginBottom: 4 }}>{label}</div>
-              <div style={{ fontSize: 13, color: "#ddd", lineHeight: 1.6 }}>{value || "—"}</div>
-            </div>
-          ))}
+      <div className="tag-section">
+        <div className="tag-section-label">感情語</div>
+        <div className="tags">
+          {result.emotionTags?.map((t) => <Tag key={t} label={t} color="var(--terra)" bg="var(--terra-pale)" border="rgba(196,113,74,0.3)" />)}
         </div>
-
-        {/* 感情語ラベル */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, color: "#555", marginBottom: 6 }}>感情語</div>
-          <div>{result.emotionTags?.map((t) => <Tag key={t} label={t} color="#f7c16e" bg="rgba(247,193,110,0.1)" />)}</div>
+      </div>
+      <div className="tag-section">
+        <div className="tag-section-label">原因タグ</div>
+        <div className="tags">
+          {result.causeTags?.map((t) => <Tag key={t} label={t} color="var(--sage)" bg="var(--sage-pale)" border="rgba(122,158,142,0.3)" />)}
         </div>
-
-        {/* 原因タグ */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, color: "#555", marginBottom: 6 }}>原因タグ</div>
-          <div>{result.causeTags?.map((t) => <Tag key={t} label={t} color="#6ef7b0" bg="rgba(110,247,176,0.1)" />)}</div>
+      </div>
+      <div className="tag-section">
+        <div className="tag-section-label">認知的評価</div>
+        <div className="tags">
+          {result.cognitiveTags?.map((t) => <Tag key={t} label={t} color="var(--mauve)" bg="var(--mauve-pale)" border="rgba(160,122,142,0.3)" />)}
         </div>
-
-        {/* 認知的評価 */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, color: "#555", marginBottom: 6 }}>認知的評価</div>
-          <div>{result.cognitiveTags?.map((t) => <Tag key={t} label={t} color="#c16ef7" bg="rgba(193,110,247,0.1)" />)}</div>
-        </div>
-
-        {/* 心理的状態 */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, color: "#555", marginBottom: 6 }}>心理的状態</div>
-          <div>{result.psychTags?.map((t) => <Tag key={t} label={t} color="#f76e6e" bg="rgba(247,110,110,0.1)" />)}</div>
-        </div>
-
-        {/* 身体的状態 */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, color: "#555", marginBottom: 6 }}>身体的状態</div>
-          <div>{result.physicalTags?.map((t) => <Tag key={t} label={t} color="#6e9af7" bg="rgba(110,154,247,0.1)" />)}</div>
-        </div>
-
-        {/* AIメモ */}
-        <div
-          style={{
-            background: "rgba(255,255,255,0.03)",
-            borderLeft: "2px solid #333",
-            padding: "12px 16px",
-            borderRadius: "0 8px 8px 0",
-            marginTop: 8,
-          }}
-        >
-          <div style={{ fontSize: 11, color: "#555", marginBottom: 6 }}>AIメモ</div>
-          <div style={{ fontSize: 13, color: "#aaa", lineHeight: 1.8 }}>{result.aiNote}</div>
+      </div>
+      <div className="tag-section">
+        <div className="tag-section-label">心理的状態 / 身体的状態</div>
+        <div className="tags">
+          {result.psychTags?.map((t) => <Tag key={t} label={t} color="var(--dusty-blue)" bg="var(--dusty-blue-pale)" border="rgba(123,154,181,0.3)" />)}
+          {result.physicalTags?.map((t) => <Tag key={t} label={t} color="#8a9e7a" bg="#eaf0e4" border="rgba(138,158,122,0.3)" />)}
         </div>
       </div>
 
+      <div className="ai-note">
+        <div className="ai-note-label">Insight</div>
+        <div className="ai-note-text">{result.aiNote}</div>
+      </div>
+
       <button
+        className={`btn-save ${saved ? "done" : saving ? "loading" : "idle"}`}
         onClick={onSave}
         disabled={saving || saved}
-        style={{
-          width: "100%",
-          padding: "14px",
-          borderRadius: 10,
-          border: "none",
-          background: saved ? "#1a3a2a" : saving ? "#1a1a1a" : "#e8f0fe",
-          color: saved ? "#6ef7b0" : saving ? "#555" : "#0a0a0a",
-          fontSize: 14,
-          fontWeight: 700,
-          cursor: saved || saving ? "default" : "pointer",
-          letterSpacing: 0.5,
-          transition: "all 0.3s",
-        }}
       >
         {saved ? "✓ Notionに保存しました" : saving ? "保存中..." : "Notionに保存する"}
       </button>
+      <button className="btn-reset btn-reset-below" onClick={onReset}>リセット</button>
     </div>
   );
 }
@@ -182,26 +445,34 @@ export default function App() {
     }
   }, [text]);
 
+  const handleReset = () => {
+    setText("");
+    setArousal(3);
+    setValence(0);
+    setIntensity(3);
+    setResult(null);
+    setError(null);
+    setSaved(false);
+  };
+
   const analyze = async () => {
     if (!text.trim()) return;
     setLoading(true);
     setResult(null);
     setError(null);
     setSaved(false);
-
     const now = new Date();
     const dateStr = now.toISOString().slice(0, 10);
     const timeStr = now.toTimeString().slice(0, 5);
-
     const prompt = `あなたは感情分析の専門家です。以下のユーザーの入力を分析してください。
 
 【入力テキスト】
 ${text}
 
 【ユーザーが入力した数値】
-- 感情の強さ: ${intensity}/5
+- 感情の強さ（心の揺れ）: ${intensity}/5
 - 快不快: ${valence}（-2=かなり不快 〜 +2=かなり快）
-- 覚醒度: ${arousal}/5（1=とても穏やか 〜 5=強く興奮）
+- 体の活性度（覚醒度）: ${arousal}/5（1=とても穏やか 〜 5=強く興奮）
 
 以下のJSON形式だけで返答してください。余計な文章は不要です。
 
@@ -222,7 +493,6 @@ ${text}
 認知的評価の候補: 白黒思考, 自己批判, 過度な一般化, 破局化, 他者批判, 読心術, べき思考, フィルタリング, 成長の機会, コントロール可能, 自分の成果, 他者への感謝, 意味を感じた
 心理的状態の候補: プレッシャー, 孤立感, 不確実性, 自己効力感が低い, 期待過多, 余裕がない, フロー状態, 心理的安全, 自律感, 有能感, つながり感
 身体的状態の候補: 頭痛・体の痛み, 体調不良, 身体が軽い, エネルギー充填, 疲労感, 睡眠不足, 空腹`;
-
     try {
       const res = await fetch("/api/analyze", {
         method: "POST",
@@ -245,10 +515,6 @@ ${text}
     if (!result) return;
     setSaving(true);
     try {
-      const now = new Date();
-
-
-
       const res = await fetch("/api/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -263,146 +529,88 @@ ${text}
     }
   };
 
+  const sliders = [
+    {
+      label: "心の揺れ具合", desc: "感情がどれだけ自分を支配しているか",
+      value: intensity, onChange: setIntensity, min: 1, max: 5,
+      trackColor: "#c4714a", thumbColor: "#c4714a",
+      endLabels: ["ほぼ気にならない", "頭から離れない"],
+      currentLabel: { 1: "ほぼ気にならない", 2: "やや気になる", 3: "ふつう", 4: "かなり強い", 5: "頭から離れない" }[intensity],
+    },
+    {
+      label: "快・不快", desc: "この感情は心地よいか、不快か",
+      value: valence, onChange: setValence, min: -2, max: 2,
+      trackColor: "#7b9ab5", thumbColor: "#7b9ab5",
+      endLabels: ["かなり不快", "かなり快"],
+      currentLabel: VALENCE_LABELS[String(valence)],
+    },
+    {
+      label: "体の活性度", desc: "体が起きているか、落ち着いているか",
+      value: arousal, onChange: setArousal, min: 1, max: 5,
+      trackColor: "#7a9e8e", thumbColor: "#7a9e8e",
+      endLabels: ["ぐったり・眠い", "心拍数が上がっている"],
+      currentLabel: AROUSAL_LABELS[arousal],
+    },
+  ];
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#080808",
-        color: "#e0e0e0",
-        fontFamily: "'Noto Sans JP', 'Helvetica Neue', sans-serif",
-        padding: "40px 20px",
-        boxSizing: "border-box",
-      }}
-    >
-      <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet" />
-
-      <div style={{ maxWidth: 560, margin: "0 auto" }}>
-        {/* ヘッダー */}
-        <div style={{ marginBottom: 36 }}>
-          <div style={{ fontSize: 11, letterSpacing: 4, color: "#444", marginBottom: 8, textTransform: "uppercase" }}>
-            Emotion Log
+    <>
+      <style>{css}</style>
+      <div className="app">
+        <div className="container">
+          <div className="header">
+            <div className="app-name-row">
+              <div className="app-name-ja"><span className="koko">ここ</span>ログ</div>
+              <div className="app-name-en">kokolog</div>
+              <div className="app-name-divider" />
+            </div>
+            <div className="header-title">今、何が起きていますか？</div>
+            <div className="header-sub">
+              事実でも感情でも、混ざっていてOK。そのまま書いてください。
+            </div>
           </div>
-          <div style={{ fontSize: 26, fontWeight: 700, color: "#fff", letterSpacing: -0.5 }}>
-            今、何が起きていますか？
-          </div>
-          <div style={{ fontSize: 13, color: "#555", marginTop: 6 }}>
-            事実でも感情でも、混ざっていてOK。そのまま書いてください。
-          </div>
-        </div>
 
-        {/* テキスト入力 */}
-        <div
-          style={{
-            background: "#111",
-            border: "1px solid #1e1e1e",
-            borderRadius: 14,
-            padding: "16px 20px",
-            marginBottom: 24,
-            transition: "border-color 0.2s",
-          }}
-        >
-          <textarea
-            ref={textareaRef}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="例：会議で発言できなかった。なんか今日ダメだった気がする..."
-            style={{
-              width: "100%",
-              minHeight: 80,
-              background: "transparent",
-              border: "none",
-              outline: "none",
-              color: "#ddd",
-              fontSize: 15,
-              lineHeight: 1.8,
-              resize: "none",
-              fontFamily: "inherit",
-              overflow: "hidden",
-            }}
-          />
-        </div>
-
-        {/* スライダー群 */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 24, marginBottom: 28 }}>
-          <div>
-            <div style={{ fontSize: 12, color: "#555", marginBottom: 4, letterSpacing: 1 }}>心の揺れ具合</div>
-            <div style={{ fontSize: 11, color: "#333", marginBottom: 8 }}>感情がどれだけ自分を支配しているか</div>
-            <Slider
-              value={intensity}
-              onChange={setIntensity}
-              min={1}
-              max={5}
-              color="#f7c16e"
-              labels={{ 1: "ほぼ気にならない", 2: "", 3: "ふつう", 4: "", 5: "頭から離れない" }}
+          <div className="input-card">
+            <div className="input-label">できごと・気持ち</div>
+            <textarea
+              ref={textareaRef}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="例：会議で発言できなかった。なんか今日ダメだった気がする..."
             />
           </div>
-          <div>
-            <div style={{ fontSize: 12, color: "#555", marginBottom: 4, letterSpacing: 1 }}>快・不快</div>
-            <div style={{ fontSize: 11, color: "#333", marginBottom: 8 }}>この感情は心地よいか、不快か</div>
-            <Slider
-              value={valence}
-              onChange={setValence}
-              min={-2}
-              max={2}
-              color="#6ee7f7"
-              labels={VALENCE_LABELS}
-            />
+
+          <div className="sliders">
+            {sliders.map((s) => (
+              <div className="slider-row" key={s.label}>
+                <div className="slider-header">
+                  <span className="slider-name">{s.label}</span>
+                  <span className="slider-desc">{s.desc}</span>
+                  <span className="slider-value-label" style={{ color: s.trackColor }}>{s.currentLabel}</span>
+                </div>
+                <Slider {...s} />
+              </div>
+            ))}
           </div>
-          <div>
-            <div style={{ fontSize: 12, color: "#555", marginBottom: 4, letterSpacing: 1 }}>体の活性度</div>
-            <div style={{ fontSize: 11, color: "#333", marginBottom: 8 }}>体が起きているか、落ち着いているか</div>
-            <Slider
-              value={arousal}
-              onChange={setArousal}
-              min={1}
-              max={5}
-              color="#c16ef7"
-              labels={{ 1: "ぐったり・眠い", 2: "", 3: "ふつう", 4: "", 5: "心拍数が上がっている" }}
-            />
+
+          <div className="btn-row">
+            <button
+              className={`btn-analyze ${text.trim() && !loading ? "active" : "inactive"}`}
+              onClick={analyze}
+              disabled={loading || !text.trim()}
+            >
+              {loading ? "分析中..." : "AIで分析する"}
+            </button>
           </div>
-        </div>
 
-        {/* 分析ボタン */}
-        <button
-          onClick={analyze}
-          disabled={loading || !text.trim()}
-          style={{
-            width: "100%",
-            padding: "16px",
-            borderRadius: 12,
-            border: "none",
-            background: text.trim() && !loading ? "#fff" : "#1a1a1a",
-            color: text.trim() && !loading ? "#000" : "#333",
-            fontSize: 15,
-            fontWeight: 700,
-            cursor: text.trim() && !loading ? "pointer" : "default",
-            letterSpacing: 0.5,
-            transition: "all 0.2s",
-          }}
-        >
-          {loading ? "分析中..." : "AIで分析する"}
-        </button>
+          {error && <div className="error-msg">{error}</div>}
+          {result && <ResultBlock result={result} onSave={saveToNotion} onReset={handleReset} saving={saving} saved={saved} />}
 
-        {error && (
-          <div style={{ marginTop: 16, color: "#f76e6e", fontSize: 13, textAlign: "center" }}>
-            {error}
+          <div className="footer">
+            <span>ここログ</span> — API Key & DB ID を設定してから使用してください
           </div>
-        )}
-
-        {result && (
-          <ResultBlock
-            result={result}
-            onSave={saveToNotion}
-            saving={saving}
-            saved={saved}
-          />
-        )}
-
-        {/* フッター */}
-        <div style={{ marginTop: 40, textAlign: "center", fontSize: 11, color: "#2a2a2a" }}>
-          API Key & DB ID を設定してから使用してください
         </div>
       </div>
-    </div>
+    </>
   );
 }
