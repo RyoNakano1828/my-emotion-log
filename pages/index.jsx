@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 
 const VALENCE_LABELS = {
   "-2": "かなり不快",
@@ -331,6 +332,16 @@ const css = `
 
   .footer { margin-top: 48px; text-align: center; font-size: 11px; color: var(--text-muted); font-weight: 300; letter-spacing: 0.3px; }
   .footer span { font-family: 'Cormorant Garamond', serif; font-style: italic; color: var(--terra-light); }
+  .footer-link {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-decoration: none;
+    letter-spacing: 0.3px;
+    transition: color 0.2s;
+  }
+  .footer-link:hover { color: var(--terra); }
 `;
 
 function Slider({ value, onChange, min, max, trackColor, thumbColor, endLabels, currentLabel }) {
@@ -608,6 +619,8 @@ ${text}
 
           <div className="footer">
             <span>ここログ</span> — API Key & DB ID を設定してから使用してください
+            <br />
+            <Link href="/ip-tier" className="footer-link">IPホルダー ティア表を見る →</Link>
           </div>
         </div>
       </div>
